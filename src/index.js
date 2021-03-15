@@ -5,12 +5,13 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import "bootstrap/dist/css/bootstrap.css";
 // import "../node_modules/font-awesome/css/font-awesome.min.css";
-import Movies from "./components/movies";
+import Home from "./components/home";
+import { BrowserRouter } from "react-router-dom";
 
 ReactDOM.render(
-  <React.StrictMode>
-    <Movies />
-  </React.StrictMode>,
+  <BrowserRouter>
+    <Home />
+  </BrowserRouter>,
   document.getElementById("root")
 );
 

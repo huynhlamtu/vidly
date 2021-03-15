@@ -1,33 +1,46 @@
 import React, { Component } from "react";
-import { getMovies } from "../services/fakeMovieService";
+import { deleteMovie, getMovies } from "./../services/movieService";
 import MoviesTable from "./common/moviesTable";
 import Pagination from "./common/pagination";
 import { paginate } from "../utils/paginate";
 import ListGroup from "./common/listGroup";
-import { getGenre, getGenres } from ".././services/fakeGenreService";
+import { getGenres } from ".././services/genreService";
 import _ from "lodash";
+import { Link } from "react-router-dom";
+import Search from "./common/form/search";
+import { toast } from "react-toastify";
 
 class Movies extends Component {
-  // constructor(props) {
-  //     super(props);
-  //     this.state = {  }
-  // }
   state = {
     movies: [],
     genres: [],
     currtentPage: 1,
     pageSize: 4,
     sortColumn: { path: "title", order: "asc" },
+    search: "",
   };
 
-  componentDidMount() {
-    const genres = [{ name: "All Genres", _id: "AllGenres" }, ...getGenres()];
-    this.setState({ movies: getMovies(), genres });
+  async componentDidMount() {
+    const { data } = await getGenres();
+    const genres = [{ name: "All Genres", _id: "AllGenres" }, ...data];
+
+    const { data: movies } = await getMovies();
+    this.setState({ movies, genres });
   }
 
-  handleDelete = (movie) => {
+  handleDelete = async (movie) => {
+    const originalMovies = this.state.movies;
     const movies = this.state.movies.filter((m) => m._id !== movie._id);
     this.setState({ movies });
+
+    try {
+      await deleteMovie(movie._id);
+    } catch (ex) {
+      if (ex.response && ex.response.status === 404) {
+        toast.error("This movie has already deleted.");
+      }
+      this.setState({ movies: originalMovies });
+    }
   };
 
   handleLike = (movie) => {
@@ -47,7 +60,27 @@ class Movies extends Component {
   };
 
   handleGenreChange = (item) => {
-    this.setState({ selectedItem: item, currtentPage: 1 });
+    this.setState({ selectedItem: item, currtentPage: 1, search: "" });
+  };
+
+  renderAddMovieBtn = () => {
+    return (
+      <Link className="btn btn-primary mb-3" to="/movies/new">
+        Add movie
+      </Link>
+    );
+  };
+
+  onSearchChange = (query) => {
+    this.setState({ search: query, currtentPage: 1 });
+  };
+
+  searchMovies = () => {
+    const { movies, search } = this.state;
+    const matchedMovies = movies.filter(
+      (movie) => movie.title.toLowerCase().search(search.toLowerCase()) > -1
+    );
+    return matchedMovies;
   };
 
   getPageData = () => {
@@ -59,10 +92,14 @@ class Movies extends Component {
       selectedItem,
       sortColumn,
     } = this.state;
-    const filtered =
-      selectedItem !== genres[0].name && selectedItem
-        ? allMovies.filter((m) => m.genre.name === selectedItem)
-        : allMovies;
+
+    const searchedMovies = this.state.search ? this.searchMovies() : [];
+
+    const filtered = this.state.search
+      ? searchedMovies
+      : selectedItem !== genres[0].name && selectedItem
+      ? allMovies.filter((m) => m.genre.name === selectedItem)
+      : allMovies;
 
     const sorted = _.orderBy(filtered, [sortColumn.path], [sortColumn.order]);
 
@@ -73,24 +110,40 @@ class Movies extends Component {
 
   render() {
     const { length: count } = this.state.movies;
+    const user = this.props.user;
     const {
       pageSize,
       currtentPage,
       genres,
       selectedItem,
       sortColumn,
+      search,
     } = this.state;
+
     if (count === 0)
       return (
-        <div className="container my-4">
-          There are no movies in the database.
-        </div>
+        <React.Fragment>
+          <div class="progress" style={{ height: "2.5rem" }}>
+            <div
+              class="progress-bar progress-bar-striped progress-bar-animated text-center"
+              role="progressbar"
+              aria-valuenow="100"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              style={{ width: "100%" }}
+            >
+              <h5 className="font-weight-bold">
+                Loading movies from databases
+              </h5>
+            </div>
+          </div>
+        </React.Fragment>
       );
 
     const { totalCount, movies } = this.getPageData();
 
     return (
-      <div className="container">
+      <React.Fragment>
         <div className="row">
           <div className="col-3 my-4">
             <ListGroup
@@ -103,7 +156,12 @@ class Movies extends Component {
             <div className="my-4">
               Showing {totalCount} movies in the database
             </div>
+            <div className="my-4 d-flex justify-content-between align-items-center">
+              <Search onChange={this.onSearchChange} search={search} />
+              {user && user.isAdmin && this.renderAddMovieBtn()}
+            </div>
             <MoviesTable
+              user={user}
               movies={movies}
               onLike={this.handleLike}
               onDelete={this.handleDelete}
@@ -118,7 +176,7 @@ class Movies extends Component {
             />
           </div>
         </div>
-      </div>
+      </React.Fragment>
     );
   }
 }

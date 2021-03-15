@@ -1,10 +1,10 @@
 import React, { Component } from "react";
 import _ from "lodash";
+import { NavLink } from "react-router-dom";
 
 class TableBody extends Component {
   renderCell = (item, column) => {
     if (column.content) return column.content(item);
-
     return _.get(item, column.path);
   };
 

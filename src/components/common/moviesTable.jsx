@@ -1,10 +1,18 @@
 import React, { Component } from "react";
 import Like from "../common/like";
 import Table from "./table";
+import { Link } from "react-router-dom";
+import userEvent from "@testing-library/user-event";
 
 class MoviesTable extends Component {
   columns = [
-    { path: "title", label: "Title" },
+    {
+      path: "title",
+      label: "Title",
+      content: (movie) => (
+        <Link to={`/movies/${movie._id}`}>{movie.title}</Link>
+      ),
+    },
     { path: "genre.name", label: "Genre" },
     { path: "numberInStock", label: "Stock" },
     { path: "dailyRentalRate", label: "Rate" },
@@ -16,15 +24,17 @@ class MoviesTable extends Component {
     },
     {
       key: "delete",
-      content: (movie) => (
-        <button
-          onClick={() => this.props.onDelete(movie)}
-          type="button"
-          className="btn btn-danger"
-        >
-          Delete
-        </button>
-      ),
+      content: (movie) =>
+        this.props.user &&
+        this.props.user.isAdmin && (
+          <button
+            onClick={() => this.props.onDelete(movie)}
+            type="button"
+            className="btn btn-danger"
+          >
+            Delete
+          </button>
+        ),
     },
   ];
 
